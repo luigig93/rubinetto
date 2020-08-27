@@ -1,0 +1,6 @@
+{
+  "client": "nome client",
+  "broker": "indirizzo IP broker MQTT",
+  "auth_token": "Telegram bot token",
+  "user_list": [000000000]
+}
