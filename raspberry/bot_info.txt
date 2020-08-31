@@ -1,0 +1,21 @@
+//contatto
+@rubinetto_bot
+
+//comandi
+rubinetto - visualizza stato rubinetto
+apri_rubinetto - apertura del rubinetto
+chiudi_rubinetto - chiusura del rubinetto
+programma - visualizza programma irrigazione quotidiano
+nuovo_programma - aggiunge/modifica programma irrigazione
+cancella_programma - cancella programma irrigazione
+
+//descrizione
+Gestione rubinetto:
+/rubinetto
+/apri_rubinetto
+/chiudi_rubinetto
+
+Gestione programma irrigazione:
+/programmma
+/nuovo_programma hh:mm durata
+/cancella_programma
