@@ -172,9 +172,10 @@ def gen_payload_start(chat_id, stato_rubinetto, prog):
     return {
         "chat_id": chat_id,
         "text": (
-                   "Benvenuto nel sistema di irrigazione!\n"
-                   "\n<b>rubinetto</b>: <i>{}</i>\n"
-                   "\n"
+                   "Benvenuto nel sistema di irrigazione!"
+                   "\n\n"
+                   "<b>rubinetto</b>: <i>{}</i>"
+                   "\n\n"
                    "<b>programma</b>: <i>{}</i>\n"
                    "inizio: <i>{}</i>\n"
                    "fine:   <i>{}</i>\n"
