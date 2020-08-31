@@ -44,12 +44,12 @@ mqttLogger.setLevel(logging.INFO)
 formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s','%d/%m/%Y %H:%M:%S')
 
 # bot file handler
-botFileLogHandler = handlers.TimedRotatingFileHandler('bot.log', when='midnight')
+botFileLogHandler = handlers.TimedRotatingFileHandler('./log/bot.log', when='midnight')
 botFileLogHandler.setLevel(logging.INFO)
 botFileLogHandler.setFormatter(formatter)
 
 # mqtt file handler
-mqttFileLogHandler = handlers.TimedRotatingFileHandler('mqtt.log', when='midnight')
+mqttFileLogHandler = handlers.TimedRotatingFileHandler('./log/mqtt.log', when='midnight')
 mqttFileLogHandler.setLevel(logging.INFO)
 mqttFileLogHandler.setFormatter(formatter)
 
