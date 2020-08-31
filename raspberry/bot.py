@@ -12,7 +12,7 @@ from datetime import timedelta
 
 ########################################################################################################################
 # config
-with open('config.json') as config_file:
+with open('./config.json') as config_file:
     config_dict = json.load(config_file)
 
 # mqtt
