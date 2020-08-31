@@ -228,10 +228,31 @@ def gen_payload_command_error(chat_id):
 
 ########################################################################################################################
 # rubinetto
-def init_rubinetto():
-    _rubinetto = "off"
-    _portata = "0.0"
-    return _rubinetto, _portata
+def init_portata():
+    return "0.0"
+
+
+def init_rubinetto(mqtt_client):
+    # campioniamo la portata per 5 secondi
+    time.sleep(5);
+    
+    # check portata
+    if float(portata) > 0:
+        # sta passando acqua, quindi l'elettrovalvola è sicuramente aperta
+        _rubinetto = "on"
+        
+    elif float(portata) == 0:
+        # non sta passando acqua, ci sono due possibili sottocasi:
+        # .) caso base: l'elettrovalvola è chiusa.
+        # .) caso particolare: l'elettrovalvola è aperta, ma nell'impianto idraulico di casa manca l'acqua. 
+        # per uniformare entrambi i casi bisogna pubblicare un messaggio di chiusura dell'elettrovalvola
+        # così se è già chiusa, resta chiusa, se è ancora aperta, allora viene chiusa.
+        pub_msg(mqtt_client, "off")
+        
+        # ok, ora lo stato del rubinetto è stato uniformato
+        _rubinetto = "off"
+  
+    return _rubinetto
 
 
 def apri_rubinetto(stato_rubinetto, mqtt_client):
@@ -419,9 +440,17 @@ def main_loop(_client, _rubinetto, _programma):
 # main
 if __name__ == "__main__":
     # init
-    rubinetto, portata = init_rubinetto()
+    portata = init_portata()
     programma = init_programma()
     client = crea_client(CLIENT_NAME, {"con": on_connect, "dis": on_disconnect, "msg": on_message}, BROKER_IP)
+    
+    # init rubinetto
+    rubinetto = init_rubinetto(client)
+    
+    # da questo momento in poi il bot è operativo, notificarlo a tutti gli utenti
+    # utile in caso di riavvio del raspberry (es. momentanea interruzione della corrente in casa)
+    notifica_utenti("rubinetto pronto...")
+    botLogger.info("rubinetto pronto: {}".format(rubinetto))
 
     # loop infinito
     main_loop(client, rubinetto, programma)
