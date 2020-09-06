@@ -77,7 +77,15 @@ def update_bot(current_update_id):
 
     # telegram bot update
     # long polling
-    res_dict = requests.post(UPDATE_URL, json=update_payload).json()
+    # potrebbe lanciare un'eccezione quando la connessione WiFi è assente
+    try:
+        res_dict = requests.post(UPDATE_URL, json=update_payload).json()
+    except requests.ConnectionError as e:
+        botLogger.error("update_bot failed >> WiFi connection problem")
+        res_dict = {"ok": False}
+    except requests.exceptions.RequestExeption as e:
+        botLogger.error("update_bot failed >> generic HTTP error")
+        res_dict = {"ok": False}
 
     # check risposta
     if res_dict["ok"] and (len(res_dict["result"]) > 0) and res_dict["result"][0]["message"]["chat"]["id"] in USER_LIST:
@@ -149,7 +157,15 @@ def elabora_update(update_dict, stato_rubinetto, prog, mqtt_client):
 
 
 def send_msg(payload):
-    res_dict = requests.post(SEND_URL, json=payload).json()
+    try:
+        res_dict = requests.post(SEND_URL, json=payload).json()
+    except requests.ConnectionError as e:
+        botLogger.error("send_msg failed >> WiFi connection problem")
+        res_dict = {"ok": False}
+    except requests.exceptions.RequestExeption as e:
+        botLogger.error("send_msg failed >> generic HTTP error")
+        res_dict = {"ok": False}
+        
     return res_dict["ok"]
 
 
