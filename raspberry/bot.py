@@ -304,6 +304,13 @@ def init_programma():
 
 
 def aggiorna_programma(prog, orario_str, durata):
+    # fare subito backup programma
+    config_dict["programma"]["start"] = orario_str
+    config_dict["programma"]["durata"] = durata
+    # dump json config backup
+    with open('./config.json', "w") as backup_file:
+        json.dump(config_dict, backup_file)
+
     # aggiungi/modifica/cancella
     prog["start_str"] = orario_str
     prog["start_obj"] = datetime.strptime(orario_str, "%H:%M") if orario_str else None
@@ -397,15 +404,9 @@ def on_connect(client, userdata, flags, rc):
 def on_disconnect(client, userdata, rc):
     if rc != 0:
         mqttLogger.warning("unexpected disconnection")
-        # la connessione non è disponibile
+        # la connessione non è disponibile, prepararsi per il riavvio
         global restart
         restart = True
-        # backup programma
-        config_dict["programma"]["start"] = programma["start_str"]
-        config_dict["programma"]["durata"] = programma["durata"]
-        # dump json config backup
-        with open('./config.json', "w") as backup_file:
-            json.dump(config_dict, backup_file)
 
 
 def on_message(client, userdata, message):
