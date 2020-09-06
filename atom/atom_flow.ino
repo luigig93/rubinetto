@@ -21,9 +21,8 @@ PubSubClient client(espClient);
 // .) flow = freq / K_FACTOR  (Liter/min)
 #define K_FACTOR 4.8
 
-//GPIO input sensore
-int flowPin = 21;  
-//GPIO input sensore
+//GPIO input sensore: yellow wire
+int flowPin = 25;  
 volatile int flow_freq;  
 
 //IRAM_ATTR is for esp32
@@ -75,9 +74,6 @@ void loop() {
      //blue led: mqtt connection ok
      M5.dis.drawpix(0, 0x0000FF);
   }
-
-  //dovrebbe servire solamente per subscribe
-  //client.loop();
   
   //flow sensor
   // Reset the counter
