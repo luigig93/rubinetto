@@ -4,6 +4,7 @@ import time
 import json
 import emojis
 import sys
+import os
 import logging
 import logging.handlers as handlers
 import paho.mqtt.client as mqtt
@@ -12,7 +13,7 @@ from datetime import timedelta
 
 ########################################################################################################################
 # config
-with open('./config.json') as config_file:
+with open('./config.json', "r") as config_file:
     config_dict = json.load(config_file)
 
 # mqtt
@@ -80,11 +81,11 @@ def update_bot(current_update_id):
     # potrebbe lanciare un'eccezione quando la connessione WiFi è assente
     try:
         res_dict = requests.post(UPDATE_URL, json=update_payload).json()
-    except requests.ConnectionError as e:
-        botLogger.error("update_bot failed >> WiFi connection problem")
+    except requests.ConnectionError:
+        botLogger.warning("update_bot failed >> WiFi connection problem")
         res_dict = {"ok": False}
-    except requests.exceptions.RequestExeption as e:
-        botLogger.error("update_bot failed >> generic HTTP error")
+    except requests.exceptions.RequestException:
+        botLogger.warning("update_bot failed >> generic HTTP error")
         res_dict = {"ok": False}
 
     # check risposta
@@ -159,13 +160,13 @@ def elabora_update(update_dict, stato_rubinetto, prog, mqtt_client):
 def send_msg(payload):
     try:
         res_dict = requests.post(SEND_URL, json=payload).json()
-    except requests.ConnectionError as e:
-        botLogger.error("send_msg failed >> WiFi connection problem")
+    except requests.ConnectionError:
+        botLogger.warning("send_msg failed >> WiFi connection problem")
         res_dict = {"ok": False}
-    except requests.exceptions.RequestExeption as e:
-        botLogger.error("send_msg failed >> generic HTTP error")
+    except requests.exceptions.RequestException:
+        botLogger.warning("send_msg failed >> generic HTTP error")
         res_dict = {"ok": False}
-        
+
     return res_dict["ok"]
 
 
@@ -250,25 +251,22 @@ def init_portata():
 
 def init_rubinetto(mqtt_client):
     # campioniamo la portata per 5 secondi
-    time.sleep(5);
-    
+    time.sleep(5)
+
     # check portata
     if float(portata) > 0:
         # sta passando acqua, quindi l'elettrovalvola è sicuramente aperta
-        _rubinetto = "on"
-        
+        return "on"
+
     elif float(portata) == 0:
         # non sta passando acqua, ci sono due possibili sottocasi:
         # .) caso base: l'elettrovalvola è chiusa.
-        # .) caso particolare: l'elettrovalvola è aperta, ma nell'impianto idraulico di casa manca l'acqua. 
+        # .) caso particolare: l'elettrovalvola è aperta, ma nell'impianto idraulico di casa manca l'acqua.
         # per uniformare entrambi i casi bisogna pubblicare un messaggio di chiusura dell'elettrovalvola
         # così se è già chiusa, resta chiusa, se è ancora aperta, allora viene chiusa.
         pub_msg(mqtt_client, "off")
-        
         # ok, ora lo stato del rubinetto è stato uniformato
-        _rubinetto = "off"
-  
-    return _rubinetto
+        return "off"
 
 
 def apri_rubinetto(stato_rubinetto, mqtt_client):
@@ -302,14 +300,7 @@ def check_portata(stato_rubinetto):
 ########################################################################################################################
 # programma
 def init_programma():
-    return {
-        "start_str": str(),
-        "end_str": str(),
-        "start_obj": None,
-        "end_obj": None,
-        "durata": str(),
-        "stato": "off"
-    }
+    return aggiorna_programma(dict(), config_dict["programma"]["start"], config_dict["programma"]["durata"])
 
 
 def aggiorna_programma(prog, orario_str, durata):
@@ -319,6 +310,7 @@ def aggiorna_programma(prog, orario_str, durata):
     prog["durata"] = durata
     prog["end_obj"] = prog["start_obj"] + timedelta(minutes=int(prog["durata"])) if orario_str else None
     prog["end_str"] = prog["end_obj"].strftime("%H:%M") if orario_str else str()
+    prog["stato"] = "off"
     return prog
 
 
@@ -393,12 +385,27 @@ def crea_client(name, callbacks, broker):
 
 # callbacks
 def on_connect(client, userdata, flags, rc):
-    mqttLogger.warning("connection result: "+ mqtt.connack_string(rc))
+    mqttLogger.warning("connection result: " + mqtt.connack_string(rc))
+
+    # gestione riconnessione
+    if (rc == mqtt.MQTT_ERR_SUCCESS) and restart:
+        # abbiamo recuperato la connessione, possiamo riavviare lo script
+        # il riavvio è fondamentale, altrimenti il loop principale non riparte più
+        os.execv(sys.executable, ['python'] + sys.argv)
 
 
 def on_disconnect(client, userdata, rc):
     if rc != 0:
         mqttLogger.warning("unexpected disconnection")
+        # la connessione non è disponibile
+        global restart
+        restart = True
+        # backup programma
+        config_dict["programma"]["start"] = programma["start_str"]
+        config_dict["programma"]["durata"] = programma["durata"]
+        # dump json config backup
+        with open('./config.json', "w") as backup_file:
+            json.dump(config_dict, backup_file)
 
 
 def on_message(client, userdata, message):
@@ -455,14 +462,17 @@ def main_loop(_client, _rubinetto, _programma):
 ########################################################################################################################
 # main
 if __name__ == "__main__":
+    botLogger.info("script started")
+
     # init
     portata = init_portata()
     programma = init_programma()
+    restart = False
     client = crea_client(CLIENT_NAME, {"con": on_connect, "dis": on_disconnect, "msg": on_message}, BROKER_IP)
-    
+
     # init rubinetto
     rubinetto = init_rubinetto(client)
-    
+
     # da questo momento in poi il bot è operativo, notificarlo a tutti gli utenti
     # utile in caso di riavvio del raspberry (es. momentanea interruzione della corrente in casa)
     notifica_utenti("rubinetto pronto...")
